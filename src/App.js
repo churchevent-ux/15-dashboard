@@ -28,21 +28,32 @@ import VolunteerRegister from "./pages/VolunteerRegister";
 import VolunteerIDCard from "./pages/VolunteerIDCard";
 
 function App() {
-  // ===================== Inline Admin Protection =====================
   const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
 
   return (
     <Router>
       <Routes>
 
-        {/* -------------------- Default Route → Redirect to /admin -------------------- */}
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+        {/* Default route → admin login */}
+        <Route path="/" element={<Navigate to="/admin-login" replace />} />
 
         {/* -------------------- Public Routes -------------------- */}
-        <Route path="/Home" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin-login" element={<AdminLogin />} />
+
+        {/* Admin Login → redirect to dashboard if already logged in */}
+        <Route
+          path="/admin-login"
+          element={
+            isAdminLoggedIn ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
+              <AdminLogin />
+            )
+          }
+        />
+
         <Route path="/id-card" element={<IDCard />} />
         <Route path="/volunteer-register" element={<VolunteerRegister />} />
         <Route path="/volunteer-id" element={<VolunteerIDCard />} />
@@ -55,14 +66,13 @@ function App() {
             isAdminLoggedIn ? (
               <AdminLayout />
             ) : (
-              <Navigate to="/admin" replace />
+              <Navigate to="/admin-login" replace />
             )
           }
         >
-          {/* Redirect /admin → dashboard */}
+          {/* When visiting /admin → automatically load dashboard */}
           <Route index element={<Navigate to="dashboard" replace />} />
 
-          {/* Admin Child Pages */}
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetails />} />
@@ -76,9 +86,8 @@ function App() {
           <Route path="volunteers" element={<Volunteers />} />
         </Route>
 
-        {/* -------------------- Fallback Route → redirect to /admin -------------------- */}
-        <Route path="*" element={<Navigate to="/admin" replace />} />
-
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/admin-login" replace />} />
       </Routes>
     </Router>
   );
