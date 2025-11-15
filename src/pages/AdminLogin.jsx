@@ -52,7 +52,7 @@ const AdminLogin = () => {
       </div>
     </div>
   );
-};
+};      
 
 const styles = {
   container: { position: "relative", display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" },
@@ -64,4 +64,4 @@ const styles = {
   button: { padding: 14, fontSize: 16, fontWeight: "bold", backgroundColor: "#2980b9", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" },
 };
 
-export default AdminLogin;
+export default AdminLogin;        
