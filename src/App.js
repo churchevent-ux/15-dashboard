@@ -55,7 +55,7 @@ function App() {
             isAdminLoggedIn ? (
               <AdminLayout />
             ) : (
-              <Navigate to="/admin-login" replace />
+              <Navigate to="/admin" replace />
             )
           }
         >
