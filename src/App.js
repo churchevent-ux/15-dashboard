@@ -4,8 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 // ===================== Public Pages =====================
 import Home from "./pages/Home";
 import Register from "./pages/Register";
-import Login from "./pages/login";
-import AdminLogin from "./pages/AdminLogin";
 import IDCard from "./pages/IDCard";
 
 // ===================== Admin Layout & Pages =====================
@@ -28,49 +26,23 @@ import VolunteerRegister from "./pages/VolunteerRegister";
 import VolunteerIDCard from "./pages/VolunteerIDCard";
 
 function App() {
-  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
-
   return (
     <Router>
       <Routes>
 
-        {/* Default route → admin login */}
-        <Route path="/" element={<Navigate to="/admin-login" replace />} />
+        {/* Default route → go directly to admin dashboard */}
+        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 
         {/* -------------------- Public Routes -------------------- */}
         <Route path="/home" element={<Home />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-
-        {/* Admin Login → redirect to dashboard if already logged in */}
-        <Route
-          path="/admin-login"
-          element={
-            isAdminLoggedIn ? (
-              <Navigate to="/admin/dashboard" replace />
-            ) : (
-              <AdminLogin />
-            )
-          }
-        />
-
         <Route path="/id-card" element={<IDCard />} />
         <Route path="/volunteer-register" element={<VolunteerRegister />} />
         <Route path="/volunteer-id" element={<VolunteerIDCard />} />
         <Route path="/preview" element={<Preview />} />
 
-        {/* -------------------- Admin Routes (Protected) -------------------- */}
-        <Route
-          path="/admin"
-          element={
-            isAdminLoggedIn ? (
-              <AdminLayout />
-            ) : (
-              <Navigate to="/admin-login" replace />
-            )
-          }
-        >
-          {/* When visiting /admin → automatically load dashboard */}
+        {/* -------------------- Admin Routes -------------------- */}
+        <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
 
           <Route path="dashboard" element={<AdminDashboard />} />
@@ -86,8 +58,9 @@ function App() {
           <Route path="volunteers" element={<Volunteers />} />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/admin-login" replace />} />
+        {/* Fallback → default to admin dashboard */}
+        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+
       </Routes>
     </Router>
   );
