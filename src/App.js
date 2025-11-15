@@ -19,7 +19,7 @@ import Settings from "./pages/Settings";
 import Teams from "./pages/Team";
 import Attendance from "./pages/attendence";
 import BreakIn from "./pages/break";
-import Notifications from "./pages//notifications";
+import Notifications from "./pages/notifications";
 import Volunteers from "./pages/volunteers";
 import Preview from "./pages/Preview";
 
@@ -35,8 +35,11 @@ function App() {
     <Router>
       <Routes>
 
+        {/* -------------------- Default Route → Redirect to /admin -------------------- */}
+        <Route path="/" element={<Navigate to="/admin" replace />} />
+
         {/* -------------------- Public Routes -------------------- */}
-        <Route path="/" element={<Home />} />
+        <Route path="/Home" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
@@ -45,14 +48,18 @@ function App() {
         <Route path="/volunteer-id" element={<VolunteerIDCard />} />
         <Route path="/preview" element={<Preview />} />
 
-        {/* -------------------- Admin Routes (Protected HERE) -------------------- */}
+        {/* -------------------- Admin Routes (Protected) -------------------- */}
         <Route
           path="/admin"
           element={
-            isAdminLoggedIn ? <AdminLayout /> : <Navigate to="/admin-login" replace />
+            isAdminLoggedIn ? (
+              <AdminLayout />
+            ) : (
+              <Navigate to="/admin-login" replace />
+            )
           }
         >
-          {/* Redirect /admin to dashboard */}
+          {/* Redirect /admin → dashboard */}
           <Route index element={<Navigate to="dashboard" replace />} />
 
           {/* Admin Child Pages */}
@@ -69,8 +76,8 @@ function App() {
           <Route path="volunteers" element={<Volunteers />} />
         </Route>
 
-        {/* -------------------- Fallback Route -------------------- */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* -------------------- Fallback Route → redirect to /admin -------------------- */}
+        <Route path="*" element={<Navigate to="/admin" replace />} />
 
       </Routes>
     </Router>
