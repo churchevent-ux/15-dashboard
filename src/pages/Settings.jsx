@@ -14,7 +14,7 @@ const allModules = [
   { key: "users", label: "All Students" },
   { key: "attendance", label: "Class Attendance" },
   { key: "break", label: "Break Out" },
-  { key: "teams", label: "Teams / Groups" },
+  { key: "teams", label: "Teens & Kids" },
   { key: "notifications", label: "Notifications" },
   { key: "settings", label: "Settings" },
   { key: "messages", label: "Messages / Announcements" },
@@ -29,6 +29,7 @@ const Settings = () => {
   const [message, setMessage] = useState("");
   const [users, setUsers] = useState([]);
   const [filterRole, setFilterRole] = useState("All");
+  const [showDefaultAdmin, setShowDefaultAdmin] = useState(false);
 
   // Fetch users in real-time
   useEffect(() => {
@@ -38,6 +39,35 @@ const Settings = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Create default admin user
+  const createDefaultAdmin = async () => {
+    try {
+      const defaultAdminEmail = "admin@church.com";
+      const defaultAdminPassword = "Admin@2025";
+
+      // Check if admin already exists
+      const existingAdmin = users.find(u => u.emailOrPhone === defaultAdminEmail);
+      if (existingAdmin) {
+        setMessage("Admin user already exists!");
+        return;
+      }
+
+      await addDoc(collection(db, "dashboardUsers"), {
+        emailOrPhone: defaultAdminEmail,
+        password: defaultAdminPassword,
+        role: "Admin",
+        permissions: allModules.map(m => m.key),
+        createdAt: serverTimestamp(),
+      });
+      setMessage("✅ Default Admin Created! Email: admin@church.com | Password: Admin@2025");
+      setShowDefaultAdmin(false);
+      setTimeout(() => setMessage(""), 5000);
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ Error creating default admin. Try again.");
+    }
+  };
 
   // Add new user
   const handleAddUser = async (e) => {
@@ -96,7 +126,38 @@ const Settings = () => {
     >
       <h2 style={{ textAlign: "center", marginBottom: 25 }}>Dashboard User Management</h2>
 
-      {/* Add User Form */}
+      {/* Create Default Admin Button */}
+      {users.length === 0 && (
+        <div
+          style={{
+            maxWidth: 1000,
+            margin: "0 auto 30px",
+            background: "#e8f5e9",
+            padding: 20,
+            borderRadius: 12,
+            border: "2px solid #4CAF50",
+            textAlign: "center",
+          }}
+        >
+          <h3 style={{ margin: "0 0 10px", color: "#2e7d32" }}>No Users Found</h3>
+          <p style={{ margin: "0 0 15px", color: "#555" }}>Create a default admin user to get started</p>
+          <button
+            onClick={createDefaultAdmin}
+            style={{
+              padding: "12px 24px",
+              borderRadius: 8,
+              border: "none",
+              backgroundColor: "#4CAF50",
+              color: "#fff",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: 16,
+            }}
+          >
+            🔑 Create Default Admin User
+          </button>
+        </div>
+      )}
       <div
         style={{
           maxWidth: 1000,

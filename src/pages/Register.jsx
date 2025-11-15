@@ -45,6 +45,8 @@ const fieldRefs = {
     medicalNotes: "",
     siblings: [], // ✅ NEW FIELD
     hasSibling: "no",
+    registrationFee: 100, // ✅ Fee in AED
+    feeStatus: "pending", // pending, paid, unpaid
   });
   
 
@@ -131,7 +133,7 @@ const formatFieldName = (field) => {
 const handleAddSibling = () => {
   setFormData((prev) => ({
     ...prev,
-    siblings: [...prev.siblings, { name: "", contact: "" }],
+    siblings: [...prev.siblings, { name: "", age: "" }],
   }));
 };
 
@@ -157,7 +159,10 @@ const handleSubmit = async (e) => {
     "participantName",
     "dob",
     "primaryContactNumber",
+    "primaryContactRelation",
     "email",
+    "residence",
+    "parentSignature",
     "parentAgreement",
   ];
 
@@ -185,7 +190,10 @@ const handleSubmit = async (e) => {
     categoryColor: formData.categoryColor,
     fatherName: formData.fatherName,
     motherName: formData.motherName,
+    contactHome: formData.contactHome,
+    contactFatherOffice: formData.contactFatherOffice,
     contactFatherMobile: formData.contactFatherMobile,
+    contactMotherOffice: formData.contactMotherOffice,
     contactMotherMobile: formData.contactMotherMobile,
     primaryContactNumber: formData.primaryContactNumber,
     primaryContactRelation: formData.primaryContactRelation,
@@ -198,29 +206,55 @@ const handleSubmit = async (e) => {
     medicalConditions: formData.medicalConditions,
     otherCondition: formData.otherCondition,
     medicalNotes: formData.medicalNotes,
+    registrationFee: formData.registrationFee,
+    feeStatus: formData.feeStatus,
     createdAt: serverTimestamp(),
   };
 
   // Sibling participants
   const siblingParticipants =
     formData.hasSibling === "yes"
-      ? formData.siblings.map((sibling) => ({
-          ...sibling,
-          fatherName: formData.fatherName,
-          motherName: formData.motherName,
-          primaryContactNumber: formData.primaryContactNumber,
-          primaryContactRelation: formData.primaryContactRelation,
-          secondaryContactNumber: formData.secondaryContactNumber || "",
-          secondaryContactRelationship: formData.secondaryContactRelationship || "",
-          email: formData.email,
-          residence: formData.residence,
-          parentAgreement: formData.parentAgreement,
-          parentSignature: formData.parentSignature,
-          medicalConditions: formData.medicalConditions,
-          otherCondition: formData.otherCondition,
-          medicalNotes: formData.medicalNotes,
-          createdAt: serverTimestamp(),
-        }))
+      ? formData.siblings.map((sibling) => {
+          // Calculate category for each sibling based on age
+          let category = "";
+          let categoryColor = "";
+          if (sibling.age >= 7 && sibling.age <= 12) {
+            category = "Kids";
+            categoryColor = "red";
+          } else if (sibling.age >= 13 && sibling.age <= 25) {
+            category = "Teen";
+            categoryColor = "blue";
+          }
+          
+          return {
+            participantName: sibling.name,
+            age: sibling.age,
+            category: category,
+            categoryColor: categoryColor,
+            dob: sibling.dob || "",
+            fatherName: formData.fatherName,
+            motherName: formData.motherName,
+            contactHome: formData.contactHome,
+            contactFatherOffice: formData.contactFatherOffice,
+            contactFatherMobile: formData.contactFatherMobile,
+            contactMotherOffice: formData.contactMotherOffice,
+            contactMotherMobile: formData.contactMotherMobile,
+            primaryContactNumber: formData.primaryContactNumber,
+            primaryContactRelation: formData.primaryContactRelation,
+            secondaryContactNumber: formData.secondaryContactNumber || "",
+            secondaryContactRelationship: formData.secondaryContactRelationship || "",
+            email: formData.email,
+            residence: formData.residence,
+            parentAgreement: formData.parentAgreement,
+            parentSignature: formData.parentSignature,
+            medicalConditions: sibling.medicalConditions || formData.medicalConditions,
+            otherCondition: sibling.otherCondition || formData.otherCondition,
+            medicalNotes: sibling.medicalNotes || formData.medicalNotes,
+            registrationFee: formData.registrationFee,
+            feeStatus: formData.feeStatus,
+            createdAt: serverTimestamp(),
+          };
+        })
       : [];
 
   const allParticipants = [mainParticipant, ...siblingParticipants];
@@ -477,11 +511,16 @@ Secondary Contact (Optional)
   />
 
   <Input
-    label="Residence Location"
+    label="Residence Location *"
     name="residence"
     value={formData.residence}
     onChange={handleChange}
     placeholder="Enter home location"
+    required
+    style={{
+      borderColor: errorField === "residence" ? "red" : "#ddd",
+      backgroundColor: errorField === "residence" ? "#ffe6e6" : "white",
+    }}
   />
 </Card>
 
@@ -612,7 +651,7 @@ Secondary Contact (Optional)
               label="Age"
               type="number"
               placeholder="Age between 8 and 18"
-              value={sibling.age}
+              value={sibling.age || ""}
               onChange={(e) => {
                 let val = parseInt(e.target.value);
                 handleSiblingChange(index, "age", val);
@@ -769,10 +808,15 @@ Secondary Contact (Optional)
   I agree to be responsible for dropping off and picking up my child from the premises.
 </label>
             <Input
-              label="Signature of Parent (Type your full name as signature)"
+              label="Signature of Parent (Type your full name as signature) *"
               name="parentSignature"
               value={formData.parentSignature}
               onChange={handleChange}
+              required
+              style={{
+                borderColor: errorField === "parentSignature" ? "red" : "#ddd",
+                backgroundColor: errorField === "parentSignature" ? "#ffe6e6" : "white",
+              }}
             />
           </Card>
 

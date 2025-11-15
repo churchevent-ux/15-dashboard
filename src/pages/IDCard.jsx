@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toPng } from "html-to-image";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { FaDownload, FaWhatsapp } from "react-icons/fa";
-import JsBarcode from "jsbarcode";
+import { FaDownload, FaWhatsapp, FaPrint } from "react-icons/fa";
 import Logo from "../images/church logo2.png";
 
 const IDCard = () => {
@@ -13,7 +12,106 @@ const IDCard = () => {
   const [participants, setParticipants] = useState([]);
   const [downloading, setDownloading] = useState(false);
   const cardRef = useRef();
-  const barcodeRefs = useRef({});
+
+  // Handle printing with QR codes
+  const handlePrint = async () => {
+    if (!participants.length) return alert("No participant data");
+    
+    const participant = participants[0];
+    const studentId = participant.familyId || participant.id;
+    
+    try {
+      let printWindow = window.open("", "_blank");
+      
+      const capitalizeName = (name) => {
+        if (!name) return "";
+        return name
+          .split(" ")
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      };
+      
+      let htmlContent = `
+        <html>
+          <head>
+            <title>Print ID Card</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+                font-family: 'Poppins', Arial, sans-serif;
+                background: white;
+                margin: 0;
+              }
+              .card {
+                width: 280px;
+                height: 397px;
+                padding: 15px;
+                border: 2px solid #6c3483;
+                border-radius: 12px;
+                text-align: center;
+                background: white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                page-break-inside: avoid;
+              }
+              .header { margin-bottom: 10px; }
+              .logo { width: 45px; height: 45px; object-fit: contain; margin-bottom: 6px; }
+              .event-title { margin: 6px 0; font-size: 15px; font-weight: bold; color: #6c3483; }
+              .event-subtitle { margin: 2px 0; font-size: 10px; color: #333; }
+              .event-date { margin: 1px 0; font-size: 8px; color: #555; }
+              .divider { border: none; border-top: 1px solid #ccc; margin: 8px 0; }
+              .name { margin: 8px 0; color: #6c3483; font-size: 15px; font-weight: bold; }
+              .category-medical { margin: 4px 0; font-size: 9px; color: #333; }
+              .qr-wrapper { margin: 10px 0; display: flex; justify-content: center; align-items: center; }
+              .qr-wrapper img { width: 100px; height: 100px; border: 1px solid #ddd; }
+              .student-id { margin: 6px 0; font-weight: bold; font-size: 12px; color: #6c3483; }
+              @media print {
+                body { background: white; padding: 0; }
+                .card { margin: 0; box-shadow: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="header">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABICAIAAACx0vT3AAAACXBIWXMAACHWAAAh1gGQfXrCAAACTUlEQVR4nO3WvWsUQBDG9/b2PJ/FyiIKgkQFETsL/wJBsVEJNhY2gk0gYoOFnaWFlY2NhZWFjZ2FhZWF4V9gYWMhahEVL8QLt5P7c7c7uzs3c3fJwAw35wPMcD8ze3u7u7PZbJZlWZIkwzBM0+zr6+toNJpMJkmSrFaryWSyWq3K5XJfX5/rupZl1Wq1+XzuOE65XE7TNEmSSqXyL/3+/h4aGorH41dXV/f39xxHSZJM03RddxwHACzL0jQtmUwyDKNSqXiex+M4AOj1eiSK4nK5bBxHkiTLsnQ6nXPOdV0ej4Ni/Pj4qNPpJJPJ7u5uQ1Ey4/E4FAqZplkqlXjcDgr6+/vT6/XW63UoFAqHwwzBsO6BfD7P8zzHcZIkAcDD4+M/JjbqVjD3+z3HcWxshMNhZrMZ+8t1XZqmNZtN13UZhuG6bnH+/f01DIMkScUx6B9XVx9lw+Ewz/MKhYJhGARBAPD29na/3z8/P/N9n+M40nQ4HFK73f7T0+FwSNP0brcDABH6nU6nz8/PV1dXhUIhGAwqM+jhcHh6enoymXQ6nXA4/PH+3t/fH9fdRqNBZbPZer1+fn5+eHhIZbNZl8uFRCJRr9eVGVSVTkWpVHrfBWtraxwOB6NREQT+lxjcbjeFQsGWZRGLhVu/X1FU55xjsZja3+YsNxuNRtJsVzSXlZXl5ubGYrHgcrlsbGyUy2WLxaLH4/n7tFqtVqvV/X6/2+3+4fH+RkkEQaDRaOT7/lxeWDKZ5HkehnHlZXm9XpvNhkQiMe+8IjY3N5nNZgSBYWZmhuM4DMPicrlISEgICAEhIAQkIQSEgBAQAkJACAgBISAEhIAQEAL+BgNBPXKkMBxkAAAAAElFTkSuQmCC" alt="Logo" class="logo">
+                <h1 class="event-title">Deo Gratias 2025</h1>
+                <p class="event-subtitle">Teens & Kids Retreat</p>
+                <p class="event-date">(Dec 28 – 30) | St. Mary's Church, Dubai</p>
+                <p class="event-date">P.O. BOX: 51200, Dubai, U.A.E</p>
+                <hr class="divider">
+              </div>
+              <h2 class="name">${capitalizeName(participant.participantName)}</h2>
+              <p class="category-medical">Category: ${participant.category || "-"} | Medical: ${participant.medicalConditions?.length ? participant.medicalConditions.join(", ") : "N/A"}</p>
+              <div class="qr-wrapper">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(studentId)}" alt="QR Code" onerror="console.error('QR Code failed to load');">
+              </div>
+              <p class="student-id">${studentId}</p>
+            </div>
+          </body>
+          <script>
+            window.onload = function() {
+              window.setTimeout(function() {
+                window.print();
+              }, 1000);
+            };
+          </script>
+        </html>
+      `;
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (err) {
+      console.error("Error printing:", err);
+      alert("Error generating print: " + err.message);
+    }
+  };
 
 
   // Helper: calculate age from DOB
@@ -57,21 +155,6 @@ const IDCard = () => {
 
     setParticipants(allParticipants);
   }, [state, navigate, getCategoryCode]);
-
-  // Generate barcode for each participant
-  useEffect(() => {
-    participants.forEach((p) => {
-      const svgEl = barcodeRefs.current[p.familyId];
-      if (svgEl) {
-        JsBarcode(svgEl, p.familyId, {
-          format: "CODE128",
-          displayValue: true,
-          height: 50,
-          lineColor: "#4b0082",
-        });
-      }
-    });
-  }, [participants]);
 
 
   // Download ID card as PNG
@@ -135,8 +218,8 @@ const IDCard = () => {
           <p style={styles.siblingDetail}>
             Category: {main.category} | Medical: {main.medicalConditions || "N/A"}
           </p>
-          <div style={styles.barcodeWrapper}>
-            <svg ref={(el) => (barcodeRefs.current[main.familyId] = el)}></svg>
+          <div style={styles.qrWrapper}>
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(main.familyId)}`} alt="QR Code" style={{ width: 120, height: 120 }} />
           </div>
         </div>
 
@@ -156,8 +239,8 @@ const IDCard = () => {
                   Category: {sib.category} | Medical: {sib.medicalConditions || "N/A"}
                 </p>
                 {sib.familyId && (
-                  <div style={styles.barcodeWrapper}>
-                    <svg ref={(el) => (barcodeRefs.current[sib.familyId] = el)}></svg>
+                  <div style={styles.qrWrapper}>
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(sib.familyId)}`} alt="QR Code" style={{ width: 120, height: 120 }} />
                   </div>
                 )}
               </div>
@@ -200,6 +283,9 @@ const IDCard = () => {
 
       {/* Buttons */}
       <div style={styles.buttons}>
+        <button onClick={handlePrint} style={styles.print}>
+          <FaPrint /> Print Card
+        </button>
         <button onClick={handleDownload} style={styles.download}>
           <FaDownload /> {downloading ? "Downloading..." : "Download"}
         </button>
@@ -251,8 +337,20 @@ const styles = {
   scheduleCard: { background: "#fdf0ff", borderRadius: 15, padding: 8, boxShadow: "0 8px 20px rgba(0,0,0,0.1)" },
   scheduleTitle: { fontSize: 16, fontWeight: 700, color: "#6c3483", marginBottom: 8 },
   scheduleList: { fontSize: 12, lineHeight: 1.5, color: "#333" },
-  barcodeWrapper: { marginTop: 10, display: "flex", justifyContent: "center" },
-  buttons: { display: "flex", gap: 12, marginTop: 15, justifyContent: "center" },
+  qrWrapper: { marginTop: 10, display: "flex", justifyContent: "center" },
+  buttons: { display: "flex", gap: 12, marginTop: 15, justifyContent: "center", flexWrap: "wrap" },
+  print: {
+    background: "#6c3483",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding: "10px 15px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontWeight: 600,
+  },
   download: {
     background: "#6c3483",
     color: "#fff",

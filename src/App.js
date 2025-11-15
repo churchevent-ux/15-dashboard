@@ -27,13 +27,14 @@ import Preview from "./pages/Preview";
 import VolunteerRegister from "./pages/VolunteerRegister";
 import VolunteerIDCard from "./pages/VolunteerIDCard";
 
-// ===================== Utility / Scanner =====================
-// import AttendanceScanner from "./pages/AttendanceScanner";
-
 function App() {
+  // ===================== Inline Admin Protection =====================
+  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
+
   return (
     <Router>
       <Routes>
+
         {/* -------------------- Public Routes -------------------- */}
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
@@ -42,16 +43,19 @@ function App() {
         <Route path="/id-card" element={<IDCard />} />
         <Route path="/volunteer-register" element={<VolunteerRegister />} />
         <Route path="/volunteer-id" element={<VolunteerIDCard />} />
-  {/* <Route path="/attendance-scanner" element={<AttendanceScanner />} /> */}
         <Route path="/preview" element={<Preview />} />
 
-
-        {/* -------------------- Admin Routes with Layout -------------------- */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* -------------------- Admin Routes (Protected HERE) -------------------- */}
+        <Route
+          path="/admin"
+          element={
+            isAdminLoggedIn ? <AdminLayout /> : <Navigate to="/admin-login" replace />
+          }
+        >
           {/* Redirect /admin to dashboard */}
           <Route index element={<Navigate to="dashboard" replace />} />
 
-          {/* Admin child routes */}
+          {/* Admin Child Pages */}
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetails />} />
@@ -67,6 +71,7 @@ function App() {
 
         {/* -------------------- Fallback Route -------------------- */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </Router>
   );

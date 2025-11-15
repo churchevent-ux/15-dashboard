@@ -23,7 +23,7 @@ const Sidebar = () => {
     { icon: "👥", text: "Students", path: "/admin/users" },
     { icon: "📋", text: "Attendance", path: "/admin/attendance" },
     { icon: "☕", text: "Break", path: "/admin/break" },
-    { icon: "🎯", text: "Teams", path: "/admin/Teams" },
+    { icon: "🎯", text: "Teens & Kids", path: "/admin/Teams" },
     { icon:<FaHandsHelping />,text: "Volunteers", path: "/admin/volunteers" },
     { icon: "🔔", text: "Notifications", path: "/admin/notifications" },
     { icon: "⚙️", text: "Settings", path: "/admin/settings" },

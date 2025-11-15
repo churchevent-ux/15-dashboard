@@ -147,18 +147,25 @@ const Preview = () => {
     try {
       const usersRef = collection(db, "users");
       const savedDocs = [];
-      const q = query(usersRef, orderBy("createdAt", "desc"), limit(1));
-      const snap = await getDocs(q);
-      let lastNumber = 0;
+      const snap = await getDocs(usersRef);
+      
+      // Count existing IDs per category
+      const categoryCounters = { DGK: 0, DGT: 0, UND: 0, OVR: 0 };
       snap.forEach((doc) => {
-        const lastId = doc.data()?.studentId;
-        const num = lastId ? parseInt(lastId.replace(/\D/g, "")) : 0;
-        if (!isNaN(num)) lastNumber = num;
+        const studentId = doc.data()?.studentId;
+        if (studentId) {
+          const [code, num] = studentId.split("-");
+          if (code && categoryCounters.hasOwnProperty(code)) {
+            const number = parseInt(num) || 0;
+            categoryCounters[code] = Math.max(categoryCounters[code], number);
+          }
+        }
       });
 
       for (let p of participants) {
-        lastNumber++;
-        const studentId = `${p.categoryCode}-${String(lastNumber).padStart(3, "0")}`;
+        const code = p.categoryCode || "DGK";
+        categoryCounters[code]++;
+        const studentId = `${code}-${String(categoryCounters[code]).padStart(3, "0")}`;
         const data = { ...p, studentId, familyId: studentId, createdAt: serverTimestamp() };
         const docRef = await addDoc(usersRef, data);
         savedDocs.push({ ...data, docId: docRef.id });
@@ -187,7 +194,16 @@ const Preview = () => {
         {participants.map((p, index) => (
           <div key={index} style={{ ...styles.card, backgroundColor: getCardBackground(p.categoryLabel) }}>
             <div style={styles.cardHeader}>
-              <h3>{index === 0 ? "Participant" : `Sibling ${index}`}</h3>
+              <div>
+                <h3 style={{ margin: "0 0 4px 0" }}>
+                  {index === 0 ? "👤 Main Participant" : `👫 Sibling ${index}`}
+                </h3>
+                {index > 0 && (
+                  <p style={{ margin: 0, fontSize: 12, color: "#666" }}>
+                    (Separate user record in Firebase)
+                  </p>
+                )}
+              </div>
               <span style={styles.categoryBadge}>{p.categoryLabel}</span>
             </div>
 

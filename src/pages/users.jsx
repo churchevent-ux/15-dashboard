@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaTrash } from "react-icons/fa";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { toPng } from "html-to-image";
-import { QRCodeSVG } from "qrcode.react";
-import ReactDOM from "react-dom";
+import { QRCodeCanvas } from "qrcode.react";
+import Logo from "../images/church logo2.png";
 
 const Users = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const Users = () => {
     fetchUsers();
   }, []);
 
-  const handleEdit = (id) => alert(`Edit user with ID ${id}`);
+  const handleEdit = (id) => navigate(`/admin/users/${id}`);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
@@ -53,6 +53,46 @@ const Users = () => {
     setSelectedUsers((prev) =>
       prev.includes(id) ? prev.filter((uid) => uid !== id) : [...prev, id]
     );
+  };
+
+  // Regenerate unique student IDs for all users
+  const handleRegenerateIDs = async () => {
+    if (!window.confirm("This will regenerate IDs for all users. Continue?")) return;
+    
+    try {
+      const categoryCounters = { DGK: 0, DGT: 0, UND: 0, OVR: 0 };
+      
+      // Sort users by creation date
+      const sortedUsers = [...users].sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(0);
+        const dateB = b.createdAt?.toDate?.() || new Date(0);
+        return dateA - dateB;
+      });
+
+      // Assign new IDs
+      for (const user of sortedUsers) {
+        let code = "DGK"; // default
+        if (user.category === "Teen") code = "DGT";
+        else if (user.category === "Under 8") code = "UND";
+        else if (user.category === "Over 20") code = "OVR";
+        
+        categoryCounters[code]++;
+        const newStudentId = `${code}-${String(categoryCounters[code]).padStart(3, "0")}`;
+        
+        // Update Firebase
+        await updateDoc(doc(db, "users", user.id), { studentId: newStudentId });
+      }
+
+      // Refresh users list
+      const snapshot = await getDocs(collection(db, "users"));
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setUsers(data);
+      
+      alert("✅ All IDs have been regenerated successfully!");
+    } catch (err) {
+      console.error("Error regenerating IDs:", err);
+      alert("❌ Error regenerating IDs: " + err.message);
+    }
   };
 
   const getMedicalText = (user) => {
@@ -73,55 +113,152 @@ const Users = () => {
   });
 
   const handleBulkPrint = async () => {
-    const selected = users.filter((u) => selectedUsers.includes(u.id) && u.studentId);
-    if (!selected.length) return alert("Please select at least one user with a valid ID");
+    const selected = users.filter((u) => selectedUsers.includes(u.id));
+    if (!selected.length) return alert("Please select at least one user");
 
     try {
-      const dataUrls = [];
+      let printWindow = window.open("", "_blank");
+      let htmlContent = `
+        <html>
+          <head>
+            <title>Print ID Cards</title>
+            <style>
+              body {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+                padding: 20px;
+                font-family: 'Poppins', Arial, sans-serif;
+                background: white;
+                margin: 0;
+              }
+              .card {
+                width: 280px;
+                height: 397px;
+                padding: 12px;
+                border: 2px solid #6c3483;
+                border-radius: 8px;
+                text-align: center;
+                background: white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+              }
+              .header {
+                margin-bottom: 8px;
+              }
+              .logo {
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                margin-bottom: 4px;
+              }
+              .event-title {
+                margin: 4px 0;
+                font-size: 14px;
+                font-weight: bold;
+                color: #6c3483;
+              }
+              .event-subtitle {
+                margin: 2px 0;
+                font-size: 10px;
+                color: #333;
+              }
+              .event-date {
+                margin: 1px 0;
+                font-size: 8px;
+                color: #555;
+              }
+              .divider {
+                margin: 4px 0;
+                border: none;
+                border-top: 1px solid #ccc;
+              }
+              .name {
+                margin: 6px 0;
+                color: #6c3483;
+                font-size: 14px;
+                font-weight: bold;
+              }
+              .category-medical {
+                margin: 4px 0;
+                font-size: 8px;
+                color: #333;
+              }
+              .qr-wrapper {
+                margin-top: 6px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              }
+              .qr-wrapper img {
+                width: 120px;
+                height: 120px;
+                border: 1px solid #ddd;
+              }
+              .student-id {
+                margin: 2px 0;
+                font-weight: bold;
+                font-size: 12px;
+                color: #6c3483;
+              }
+              @media print {
+                body {
+                  background: white;
+                  gap: 0;
+                }
+                .card {
+                  margin: 5px;
+                }
+              }
+            </style>
+          </head>
+          <body>
+      `;
 
       for (let user of selected) {
-        const card = document.createElement("div");
-        Object.assign(card.style, {
-          width: "300px",
-          padding: "20px",
-          border: "2px solid #6c3483",
-          borderRadius: "12px",
-          textAlign: "center",
-          background: "#fff",
-        });
-
-        card.innerHTML = `
-          <h3 style="margin:5px;color:#6c3483">${capitalizeName(user.participantName)}</h3>
-          <p style="margin:5px;font-weight:bold">ID: ${user.studentId}</p>
-          <div id="qr-${user.id}"></div>
+        const studentId = user.studentId || user.id;
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(studentId)}`;
+        
+        htmlContent += `
+          <div class="card">
+            <div class="header">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABICAIAAACx0vT3AAAACXBIWXMAACHWAAAh1gGQfXrCAAACTUlEQVR4nO3WvWsUQBDG9/b2PJ/FyiIKgkQFETsL/wJBsVEJNhY2gk0gYoOFnaWFlY2NhZWFjZ2FhZWF4V9gYWMhahEVL8QLt5P7c7c7uzs3c3fJwAw35wPMcD8ze3u7u7PZbJZlWZIkwzBM0+zr6+toNJpMJkmSrFaryWSyWq3K5XJfX5/rupZl1Wq1+XzuOE65XE7TNEmSSqXyL/3+/h4aGorH41dXV/f39xxHSZJM03RddxwHACzL0jQtmUwyDKNSqXiex+M4AOj1eiSK4nK5bBxHkiTLsnQ6nXPOdV0ej4Ni/Pj4qNPpJJPJ7u5uQ1Ey4/E4FAqZplkqlXjcDgr6+/vT6/XW63UoFAqHwwzBsO6BfD7P8zzHcZIkAcDD4+M/JjbqVjD3+z3HcWxshMNhZrMZ+8t1XZqmNZtN13UZhuG6bnH+/f01DIMkScUx6B9XVx9lw+Ewz/MKhYJhGARBAPD29na/3z8/P/N9n+M40nQ4HFK73f7T0+FwSNP0brcDABH6nU6nz8/PV1dXhUIhGAwqM+jhcHh6enoymXQ6nXA4/PH+3t/fH9fdRqNBZbPZer1+fn5+eHhIZbNZl8uFRCJRr9eVGVSVTkWpVHrfBWtraxwOB6NREQT+lxjcbjeFQsGWZRGLhVu/X1FU55xjsZja3+YsNxuNRtJsVzSXlZXl5ubGYrHgcrlsbGyUy2WLxaLH4/n7tFqtVqvV/X6/2+3+4fH+RkkEQaDRaOT7/lxeWDKZ5HkehnHlZXm9XpvNhkQiMe+8IjY3N5nNZgSBYWZmhuM4DMPicrlISEgICAEhIAQkIQSEgBAQAkJACAgBISAEhIAQEAL+BgNBPXKkMBxkAAAAAElFTkSuQmCC" alt="Logo" class="logo">
+              <h1 class="event-title">Deo Gratias 2025</h1>
+              <p class="event-subtitle">Teens & Kids Retreat</p>
+              <p class="event-date">(Dec 28 – 30) | St. Mary's Church, Dubai</p>
+              <p class="event-date">P.O. BOX: 51200, Dubai, U.A.E</p>
+              <hr class="divider">
+            </div>
+            <h2 class="name">${capitalizeName(user.participantName)}</h2>
+            <p class="category-medical">Category: ${user.category || "-"} | Medical: ${user.medicalConditions?.length ? user.medicalConditions.join(", ") : "N/A"}</p>
+            <div class="qr-wrapper">
+              <img src="${qrImageUrl}" alt="QR Code" onerror="this.src='about:blank';">
+            </div>
+            <p class="student-id">${studentId}</p>
+          </div>
         `;
-
-        const qrDiv = card.querySelector(`#qr-${user.id}`);
-        if (qrDiv) {
-          const tempDiv = document.createElement("div");
-          qrDiv.appendChild(tempDiv);
-          ReactDOM.render(<QRCodeSVG value={user.studentId.toString()} size={120} />, tempDiv);
-        }
-
-        const dataUrl = await toPng(card);
-        dataUrls.push(dataUrl);
       }
 
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(`
-        <html>
-          <head><title>Print ID Cards</title></head>
-          <body style="display:flex;flex-wrap:wrap;justify-content:center">
-            ${dataUrls.map((url) => `<img src="${url}" style="margin:10px;width:300px;height:auto"/>`).join("")}
+      htmlContent += `
           </body>
+          <script>
+            window.setTimeout(function() {
+              window.print();
+            }, 500);
+          </script>
         </html>
-      `);
+      `;
+
+      printWindow.document.write(htmlContent);
       printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
     } catch (err) {
       console.error("Error generating bulk print:", err);
+      alert("Error generating print: " + err.message);
     }
   };
 
@@ -149,6 +286,10 @@ const Users = () => {
           🖨️ Print Selected ({selectedUsers.length})
         </button>
       )}
+
+      <button onClick={handleRegenerateIDs} style={{ ...styles.bulkButton, backgroundColor: "#e74c3c" }}>
+        🔄 Regenerate All IDs
+      </button>
 
       <div style={styles.cardsWrapper}>
         {filteredUsers.length ? (
@@ -198,16 +339,13 @@ const Users = () => {
                   </h3>
 
                   <p style={styles.detail}>
-                    <b>ID:</b> {user.studentId}
+                    <b>ID:</b> {user.studentId || user.id}
                   </p>
                   <p style={styles.detail}>
                     <b>Email:</b> {user.email}
                   </p>
                   <p style={styles.detail}>
-                    <b>Phone:</b> {user.contactFatherMobile}
-                  </p>
-                  <p style={styles.detail}>
-                    <b>Address:</b> {user.residence}
+                    <b>Primary Contact:</b> {user.primaryContactNumber}
                   </p>
 
                   {hasMedical && <p style={styles.healthBadge}>⚠ {medicalText}</p>}
